@@ -2,8 +2,8 @@
 # $Id$
 #
 #
-OBJ=sp_init.o sp_main.o
-
+OBJ=veloc_module.o veloc_wrapper.o sp_init.o sp_main.o 
+LIB_INCLUDES=-I${HOME}/deploy/include
 LIBRARY=libspace.a
 
 HEADER=

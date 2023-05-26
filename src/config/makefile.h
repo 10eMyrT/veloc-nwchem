@@ -3053,6 +3053,9 @@ endif
 (%.o): %.f
 	$(NWFC) -c $(FFLAGS) $<
 
+(%.o): %.f90
+	$(NWFC) -c $(FFLAGS) $<
+
 (%.o): %.c
 	$(NWCC) -c $(CPPFLAGS) $(CFLAGS) -o $% $<
 

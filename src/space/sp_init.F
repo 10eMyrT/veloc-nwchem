@@ -247,7 +247,7 @@ c
       lpbc=npbtyp.gt.0
 c
       if(me.eq.0) then
-      if(nfsync.gt.0) then 
+      if(nfsync.gt.0) then
       open(unit=lfnsyn,file=filsyn(1:index(filsyn,' ')-1),
      + status='unknown')
       write(lfnsyn,3000) np
@@ -717,52 +717,52 @@ c
       read(lfntop,2002,end=9897,err=9898) nqt
       read(lfntop,2002,end=9897,err=9898) nseq
  2002 format(i5)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
       do 1103 k=1,npars
       do 102 i=1,nat
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
       do 103 j=i,nat
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   103 continue
   102 continue
  1103 continue
       do 104 i=1,nqt*npars
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   104 continue
       do 4104 i=1,nseq
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
  4104 continue
       read(lfntop,2003,end=9897,err=9898) naw,nbw,nhw,ndw,now,ntw,nnw
  2003 format(5i7,2i10)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
       do 105 i=1,naw
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   105 continue
       do 106 i=1,nbw*(npars+1)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   106 continue
       do 107 i=1,nhw*(npars+1)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   107 continue
       do 108 i=1,ndw*(npars+1)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   108 continue
       do 109 i=1,now*(npars+1)
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   109 continue
       if(ntw.gt.0) then
-      read(lfntop,2004,end=9897,err=9898) 
-      read(lfntop,2004,end=9897,err=9898) 
+      read(lfntop,2004,end=9897,err=9898)
+      read(lfntop,2004,end=9897,err=9898)
  2004 format(11i7)
       endif
       if(nnw.gt.0) then
-      read(lfntop,2005,end=9997,err=9998) 
-      read(lfntop,2005,end=9997,err=9998) 
+      read(lfntop,2005,end=9997,err=9998)
+      read(lfntop,2005,end=9997,err=9998)
  2005 format(11i7)
       endif
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
       do 204 i=1,npars
-      read(lfntop,2001,end=9897,err=9898) 
+      read(lfntop,2001,end=9897,err=9898)
   204 continue
 c
       write(lfnout,6100)
@@ -1005,7 +1005,7 @@ c 2009 format(16x,10i5)
      + call md_abort('Error in number of solute fractions',nsf)
       endif
 c
-c     if segment of this atom is different from the segment of previous atom 
+c     if segment of this atom is different from the segment of previous atom
 c     then distribute all previous atoms in the list
 c
       if(k.gt.1) then
@@ -1359,7 +1359,7 @@ c
 c     determine node dimensions
 c
       if(npx*npy*npz.ne.np) then
-      if(npx+npy+npz.gt.0) 
+      if(npx+npy+npz.gt.0)
      + call md_abort('Specified npx*npy*npz ne np',0)
 c
       npt=0
@@ -2257,13 +2257,29 @@ c
       integer lfnrst
       character*255 filrst
       logical lveloc
-      integer iwl(mwm,miw2),isl(msa,mis2),lseq(mseq)
+      integer, target :: iwl(mwm,miw2),isl(msa,mis2)
+      integer lseq(mseq)
       real*8 pres,temp,tempw,temps
       real*8 xw(mwm,3,mwa),vw(mwm,3,mwa),fw(mwm,3,mwa),xwcr(mwm,3)
       real*8 xs(msa,3),vs(msa,3),fs(msa,3),xscr(msm,3)
       character*80 prjct
 c
       integer lenscr
+      integer :: veloc_initialized=0, ga_comm_world, verr
+
+      if (veloc_initialized.eq.0) then
+         call ga_mpi_comm_pgroup_default(ga_comm_world)
+         call VELOC_Init(ga_comm_world, "veloc-config.cfg", verr)
+         if (verr /= VELOC_SUCCESS) then
+            print *, "failed to initialize VELOC"
+            stop -1
+         endif
+         veloc_initialized = 1
+      endif
+
+      call VELOC_Mem_protect(0, c_loc(iwl),
+     + size(iwl), sizeof(iwl(1,1)), verr)
+      call VELOC_Checkpoint("nwchem-test", 1, verr)
 c
       project=prjct
 c
@@ -3237,7 +3253,7 @@ c
       endif
     2 continue
 c     begin solvent output
-c     low precision 
+c     low precision
       if(nprec.eq.0) then
       if(lfw) then
       if(lvw) then
@@ -3269,7 +3285,7 @@ c     low precision
     7 continue
       endif
       endif
-c     high precision 
+c     high precision
       else
       if(lfw) then
       if(lvw) then
@@ -3953,7 +3969,7 @@ c
       call sp_unpackw(nwmn,iwl,iwlp)
       endif
       call ga_distribution(ga_w,node,ilw,ihw,jlw,jhw)
-      call ga_get(ga_w,ilw,ilw+nwmn-1,jlw,jlw+3*mwa-1,xw,mwm) 
+      call ga_get(ga_w,ilw,ilw+nwmn-1,jlw,jlw+3*mwa-1,xw,mwm)
       call ga_get(ga_w,ilw,ilw+nwmn-1,jlw+3*mwa,jlw+6*mwa-1,vw,mwm)
       write(lfnmro) ((iwl(j,k),j=1,nwmn),k=1,miw2)
       write(lfnmro) (((xw(j,k,l),j=1,nwmn),k=1,3),l=1,nwa)
@@ -4046,7 +4062,7 @@ c
       call ga_put(ga_iw,ili,ili+nwmn-1,jli,jli+npackw-1,iwlp,mwm)
       endif
       call ga_distribution(ga_w,node,ilw,ihw,jlw,jhw)
-      call ga_put(ga_w,ilw,ilw+nwmn-1,jlw,jlw+3*mwa-1,xw,mwm) 
+      call ga_put(ga_w,ilw,ilw+nwmn-1,jlw,jlw+3*mwa-1,xw,mwm)
       call ga_put(ga_w,ilw,ilw+nwmn-1,jlw+3*mwa,jlw+6*mwa-1,vw,mwm)
       endif
       if(nsan.gt.0) then
@@ -4095,7 +4111,7 @@ c
       call sp_unpackw(nwmloc,iwl,iwlp)
       endif
       call ga_distribution(ga_w,me,ilw,ihw,jlw,jhw)
-      call ga_get(ga_w,ilw,ilw+nwmloc-1,jlw,jlw+3*mwa-1,xw,mwm) 
+      call ga_get(ga_w,ilw,ilw+nwmloc-1,jlw,jlw+3*mwa-1,xw,mwm)
       call ga_get(ga_w,ilw,ilw+nwmloc-1,jlw+3*mwa,jlw+6*mwa-1,vw,mwm)
       endif
       if(nsaloc.gt.0) then
