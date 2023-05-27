@@ -2258,10 +2258,12 @@ c
       character*255 filrst
       logical lveloc
       integer, target :: iwl(mwm,miw2),isl(msa,mis2)
+      real*8, target  :: xw(mwm,3,mwa),vw(mwm,3,mwa)
+      real*8, target  ::  xs(msa,3),vs(msa,3)
       integer lseq(mseq)
       real*8 pres,temp,tempw,temps
-      real*8 xw(mwm,3,mwa),vw(mwm,3,mwa),fw(mwm,3,mwa),xwcr(mwm,3)
-      real*8 xs(msa,3),vs(msa,3),fs(msa,3),xscr(msm,3)
+      real*8 fw(mwm,3,mwa),xwcr(mwm,3)
+      real*8 fs(msa,3),xscr(msm,3)
       character*80 prjct
 c
       integer lenscr
@@ -2279,7 +2281,20 @@ c
 
       call VELOC_Mem_protect(0, c_loc(iwl),
      + size(iwl), sizeof(iwl(1,1)), verr)
+      call VELOC_Mem_protect(1, c_loc(xw),
+     + size(xw), sizeof(xw(1,1,1)), verr)
+      call VELOC_Mem_protect(2, c_loc(vw),
+     + size(vw), sizeof(vw(1,1,1)), verr)
+
+      call VELOC_Mem_protect(3, c_loc(isl),
+     + size(isl), sizeof(isl(1,1)), verr)
+      call VELOC_Mem_protect(4, c_loc(xs),
+     + size(xs), sizeof(xs(1,1)), verr)
+      call VELOC_Mem_protect(5, c_loc(vs),
+     + size(vs), sizeof(vs(1,1)), verr)
+
       call VELOC_Checkpoint("nwchem-test", 1, verr)
+      
 c
       project=prjct
 c
