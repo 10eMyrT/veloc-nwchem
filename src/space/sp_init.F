@@ -2257,9 +2257,9 @@ c
       integer lfnrst
       character*255 filrst
       logical lveloc
-      integer, target :: iwl(mwm,miw2),isl(msa,mis2)
-      real*8, target  :: xw(mwm,3,mwa),vw(mwm,3,mwa)
-      real*8, target  ::  xs(msa,3),vs(msa,3)
+      integer:: iwl(mwm,miw2),isl(msa,mis2)
+      real*8  :: xw(mwm,3,mwa),vw(mwm,3,mwa)
+      real*8  ::  xs(msa,3),vs(msa,3)
       integer lseq(mseq)
       real*8 pres,temp,tempw,temps
       real*8 fw(mwm,3,mwa),xwcr(mwm,3)
@@ -2267,35 +2267,6 @@ c
       character*80 prjct
 c
       integer lenscr
-      integer :: veloc_initialized=0, ga_comm_world, verr
-
-      if (veloc_initialized.eq.0) then
-         call ga_mpi_comm_pgroup_default(ga_comm_world)
-         call VELOC_Init(ga_comm_world, "veloc-config.cfg", verr)
-         if (verr /= VELOC_SUCCESS) then
-            print *, "failed to initialize VELOC"
-            stop -1
-         endif
-         veloc_initialized = 1
-      endif
-
-      call VELOC_Mem_protect(0, c_loc(iwl),
-     + size(iwl), sizeof(iwl(1,1)), verr)
-      call VELOC_Mem_protect(1, c_loc(xw),
-     + size(xw), sizeof(xw(1,1,1)), verr)
-      call VELOC_Mem_protect(2, c_loc(vw),
-     + size(vw), sizeof(vw(1,1,1)), verr)
-
-      call VELOC_Mem_protect(3, c_loc(isl),
-     + size(isl), sizeof(isl(1,1)), verr)
-      call VELOC_Mem_protect(4, c_loc(xs),
-     + size(xs), sizeof(xs(1,1)), verr)
-      call VELOC_Mem_protect(5, c_loc(vs),
-     + size(vs), sizeof(vs(1,1)), verr)
-
-      call VELOC_Checkpoint("nwchem-test", 1, verr)
-      
-c
       project=prjct
 c
       lenscr=ma_inquire_avail(mt_byte)/
@@ -3102,8 +3073,12 @@ c
       return
       end
       subroutine sp_wrttrj(lfntrj,lxw,lvw,lfw,lxs,lvs,lfs,
-     + stime,pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs)
+     + stime,pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs,
+     + mdstep,minstep,maxstep)
 c
+      use iso_c_binding
+      use veloc
+      use MPI
       implicit none
 c
 #include "sp_common.fh"
@@ -3112,12 +3087,16 @@ c
 c
       integer lfntrj
       logical lxw,lvw,lfw,lxs,lvs,lfs
-      integer iwl(mwm,miw2),isl(msa,mis2)
+      integer, target :: iwl(mwm,miw2),isl(msa,mis2)
       real*8 stime,pres,temp,tempw,temps
-      real*8 xw(mwm,3,mwa),vw(mwm,3,mwa),fw(mwm,3,mwa),xwcr(mwm,3)
-      real*8 xs(msa,3),vs(msa,3),fs(msa,3)
+      real*8, target :: xw(mwm,3,mwa),vw(mwm,3,mwa)
+      real*8 fw(mwm,3,mwa),xwcr(mwm,3)
+      real*8, target ::  xs(msa,3),vs(msa,3)
+      real*8 fs(msa,3)
 c
       integer lenscr
+      integer mdstep, minstep, maxstep
+      integer :: veloc_initialized=0, ga_comm_world, verr
 c
       lenscr=ma_inquire_avail(mt_byte)/
      + ((9*mwa+3)*ma_sizeof(mt_dbl,1,mt_byte)+
@@ -3154,6 +3133,44 @@ c
      + call md_abort('Failed to deallocate bv',0)
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
+c
+      print *, "Collecting Checkpoints with VELOC"
+      if (mdstep.eq.minstep) then
+         call ga_mpi_comm_pgroup_default(ga_comm_world)
+         print *, "Ga Comm World", ga_comm_world
+         print *, "MPI Comm World", MPI_COMM_WORLD
+         call VELOC_Init(ga_comm_world, "/Codar/veloc-config.cfg", verr)
+         if (verr.ne.VELOC_SUCCESS) then
+            print *, "VELOC :: Initialization Failed"
+            stop -1
+         endif
+         !veloc_initialized = 1
+         print *, "VELOC :: Initialization Successful"
+      endif
+
+      if (modulo(mdstep, 10).eq.0) then
+         call VELOC_Mem_protect(0, c_loc(iwl),
+     +     size(iwl), sizeof(iwl(1,1)), verr)
+         call VELOC_Mem_protect(1, c_loc(xw),
+     +     size(xw), sizeof(xw(1,1,1)), verr)
+         call VELOC_Mem_protect(2, c_loc(vw),
+     +     size(vw), sizeof(vw(1,1,1)), verr)
+
+         call VELOC_Mem_protect(3, c_loc(isl),
+     +     size(isl), sizeof(isl(1,1)), verr)
+         call VELOC_Mem_protect(4, c_loc(xs),
+     +     size(xs), sizeof(xs(1,1)), verr)
+         call VELOC_Mem_protect(5, c_loc(vs),
+     +     size(vs), sizeof(vs(1,1)), verr)
+
+         call VELOC_Checkpoint("nwchem_test", mdstep, verr)
+         print *, "VELOC :: Checkpoint collected for step", mdstep
+      endif
+
+      if (mdstep.eq.maxstep) then
+         call VELOC_Finalize(1, verr)
+         print *, "VELOC :: Successfully Finalized"
+      endif
 c
       return
       end
@@ -3193,6 +3210,8 @@ c
       lpw=.false.
       lps=.false.
 c
+      !write(6, *) "Successfully Exited in wttrj"
+      !stop -1
       if(me.eq.0) then
 c
       call swatch(rdate,rtime)

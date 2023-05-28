@@ -3116,3 +3116,16 @@ else
 endif
 
 endif
+
+################################# VeloC ###################################
+#   The following libraries and paths are added to support the            #
+#   integration of VeloC into NWCHEM for checkpointing.                   #
+
+MPI_INCLUDE = $(shell $(NWCHEM_TOP)/src/tools/guess-mpidefs --mpi_include)
+INCPATH += -I${VELOC_ROOT}/include -I${MPI_INCLUDE}
+CORE_LIBS += -L${VELOC_ROOT}/lib -lveloc-client
+#                                                                         #
+#                                                                         #
+################################ VeloC End ################################
+
+
