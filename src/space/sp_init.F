@@ -3085,6 +3085,7 @@ c
 #include "mafdecls.fh"
 #include "global.fh"
 c
+      character(255) velocconf
       integer lfntrj
       logical lxw,lvw,lfw,lxs,lvs,lfs
       integer, target :: iwl(mwm,miw2),isl(msa,mis2)
@@ -3134,12 +3135,12 @@ c
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
 c
-      print *, "Collecting Checkpoints with VELOC"
       if (mdstep.eq.minstep) then
          call ga_mpi_comm_pgroup_default(ga_comm_world)
-         print *, "Ga Comm World", ga_comm_world
-         print *, "MPI Comm World", MPI_COMM_WORLD
-         call VELOC_Init(ga_comm_world, "/Codar/veloc-config.cfg", verr)
+         call get_environment_variable("VELOC_NWCHEM_CONF", velocconf)
+         print *, "VELOC :: Config file ", trim(velocconf)
+         call VELOC_Init(ga_comm_world,
+     + "/users/kate01/configs/nwchem.cfg", verr)
          if (verr.ne.VELOC_SUCCESS) then
             print *, "VELOC :: Initialization Failed"
             stop -1
@@ -3163,8 +3164,9 @@ c
          call VELOC_Mem_protect(5, c_loc(vs),
      +     size(vs), sizeof(vs(1,1)), verr)
 
-         call VELOC_Checkpoint("nwchem_test", mdstep, verr)
+         call VELOC_Checkpoint(project, mdstep, verr)
          print *, "VELOC :: Checkpoint collected for step", mdstep
+         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
       endif
 
       if (mdstep.eq.maxstep) then
