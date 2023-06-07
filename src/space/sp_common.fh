@@ -1,6 +1,11 @@
 c
 c $Id$
 c
+c     veloc configuration
+
+      character(255) veloc_conf
+      parameter(veloc_conf="/users/kate01/configs/nwchem.cfg")
+c
 c     conversion factors
 c
 c     cau2kj : from hartree to kJ/mol

@@ -2246,8 +2246,10 @@ c
       end
       subroutine sp_wrtrst(lfnrst,filrst,lveloc,
      + pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs,xscr,prjct,
-     + lseq)
+     + lseq,mdstep)
 c
+      use iso_c_binding
+      use veloc
       implicit none
 c
 #include "sp_common.fh"
@@ -2257,16 +2259,18 @@ c
       integer lfnrst
       character*255 filrst
       logical lveloc
-      integer:: iwl(mwm,miw2),isl(msa,mis2)
-      real*8  :: xw(mwm,3,mwa),vw(mwm,3,mwa)
-      real*8  ::  xs(msa,3),vs(msa,3)
+      integer, target :: iwl(mwm,miw2),isl(msa,mis2)
+      real*8, target  :: xw(mwm,3,mwa),vw(mwm,3,mwa)
+      real*8, target  ::  xs(msa,3),vs(msa,3)
       integer lseq(mseq)
       real*8 pres,temp,tempw,temps
       real*8 fw(mwm,3,mwa),xwcr(mwm,3)
       real*8 fs(msa,3),xscr(msm,3)
       character*80 prjct
+      character(len=255) ckptname
 c
       integer lenscr
+      integer mdstep, verr
       project=prjct
 c
       lenscr=ma_inquire_avail(mt_byte)/
@@ -2303,6 +2307,28 @@ c
      + call md_abort('Failed to deallocate bv',0)
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
+c
+c
+      if (modulo(mdstep, 10).eq.0) then
+         call VELOC_Mem_protect(0, c_loc(iwl),
+     +     size(iwl), sizeof(iwl(1,1)), verr)
+         call VELOC_Mem_protect(1, c_loc(xw),
+     +     size(xw), sizeof(xw(1,1,1)), verr)
+         call VELOC_Mem_protect(2, c_loc(vw),
+     +     size(vw), sizeof(vw(1,1,1)), verr)
+
+         call VELOC_Mem_protect(3, c_loc(isl),
+     +     size(isl), sizeof(isl(1,1)), verr)
+         call VELOC_Mem_protect(4, c_loc(xs),
+     +     size(xs), sizeof(xs(1,1)), verr)
+         call VELOC_Mem_protect(5, c_loc(vs),
+     +     size(vs), sizeof(vs(1,1)), verr)
+        
+         ckptname = trim(project)//"_rst"
+         call VELOC_Checkpoint(ckptname, mdstep, verr)
+         print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
+         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
+      endif
 c
       return
       end
@@ -3072,20 +3098,48 @@ c
       sp_rrest=.false.
       return
       end
+
+      subroutine sp_iveloc()
+      
+      use veloc
+      implicit none
+      integer ga_comm_world, verr
+
+      call ga_mpi_comm_pgroup_default(ga_comm_world)
+      call VELOC_Init(ga_comm_world, 
+     + "/users/kate01/configs/nwchem.cfg", verr)
+      if (verr.ne.VELOC_SUCCESS) then
+         print *, "VELOC :: Initialization Failed"
+         stop -1
+      endif
+      print *, "VELOC :: Initialization Successful"
+      
+      end
+
+      subroutine sp_fveloc()
+      
+      use veloc
+      implicit none
+
+      integer verr
+
+      call VELOC_Finalize(1, verr)
+      print *, "VELOC :: Successfully Finalized"
+      
+      end
+
       subroutine sp_wrttrj(lfntrj,lxw,lvw,lfw,lxs,lvs,lfs,
      + stime,pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs,
-     + mdstep,minstep,maxstep)
+     + mdstep)
 c
       use iso_c_binding
       use veloc
-      use MPI
       implicit none
 c
 #include "sp_common.fh"
 #include "mafdecls.fh"
 #include "global.fh"
 c
-      character(255) velocconf
       integer lfntrj
       logical lxw,lvw,lfw,lxs,lvs,lfs
       integer, target :: iwl(mwm,miw2),isl(msa,mis2)
@@ -3096,8 +3150,8 @@ c
       real*8 fs(msa,3)
 c
       integer lenscr
-      integer mdstep, minstep, maxstep
-      integer :: veloc_initialized=0, ga_comm_world, verr
+      integer mdstep, verr
+      character(len=255) ckptname
 c
       lenscr=ma_inquire_avail(mt_byte)/
      + ((9*mwa+3)*ma_sizeof(mt_dbl,1,mt_byte)+
@@ -3135,20 +3189,6 @@ c
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
 c
-      if (mdstep.eq.minstep) then
-         call ga_mpi_comm_pgroup_default(ga_comm_world)
-         call get_environment_variable("VELOC_NWCHEM_CONF", velocconf)
-         print *, "VELOC :: Config file ", trim(velocconf)
-         call VELOC_Init(ga_comm_world,
-     + "/users/kate01/configs/nwchem.cfg", verr)
-         if (verr.ne.VELOC_SUCCESS) then
-            print *, "VELOC :: Initialization Failed"
-            stop -1
-         endif
-         !veloc_initialized = 1
-         print *, "VELOC :: Initialization Successful"
-      endif
-
       if (modulo(mdstep, 10).eq.0) then
          call VELOC_Mem_protect(0, c_loc(iwl),
      +     size(iwl), sizeof(iwl(1,1)), verr)
@@ -3164,14 +3204,11 @@ c
          call VELOC_Mem_protect(5, c_loc(vs),
      +     size(vs), sizeof(vs(1,1)), verr)
 
-         call VELOC_Checkpoint(project, mdstep, verr)
-         print *, "VELOC :: Checkpoint collected for step", mdstep
-         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
-      endif
+         ckptname = trim(project)//"_trj"
 
-      if (mdstep.eq.maxstep) then
-         call VELOC_Finalize(1, verr)
-         print *, "VELOC :: Successfully Finalized"
+         call VELOC_Checkpoint(ckptname, mdstep, verr)
+         print *, "VELOC :: Checkpoint(TRJ) collected for step", mdstep
+         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
       endif
 c
       return

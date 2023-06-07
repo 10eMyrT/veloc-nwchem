@@ -6,6 +6,8 @@ c
 c
 #include "md_common.fh"
 c
+      call sp_iveloc()
+c
       if(ntype.eq.0) then
 c
 c     single energy
@@ -42,6 +44,7 @@ c
       call md_abort('Unknown calculation type',ntype)
       endif
 c
+      call sp_fveloc()
       return
       end
       subroutine md_sp()
@@ -634,7 +637,7 @@ c
      + stime,pres,temp,tempw,temps,
      + int_mb(i_iw),dbl_mb(i_xw),dbl_mb(i_vw),dbl_mb(i_fw),
      + dbl_mb(i_xwcr),int_mb(i_is),dbl_mb(i_xs),dbl_mb(i_vs),
-     + dbl_mb(i_fs),mdstep,mequi+1,mequi+mdacq)
+     + dbl_mb(i_fs),mdstep)
       endif
       endif
 c
@@ -644,7 +647,7 @@ c
       if(frequency(isdit,nfqrs).or.(ldone.and.eqrs.gt.epot)) then
       write(projct,4000) nserie,isdit,0,filnam(1:56)
  4000 format(i2,' em ',i7,' + ',i7,' ',a)
-      call md_wrtrst(lfnqrs,filqrs,.false.)
+      call md_wrtrst(lfnqrs,filqrs,.false.,mdstep)
       cqrs='*'
       eqrs=epot
       endif
@@ -1188,7 +1191,7 @@ c
      + stime,pres,temp,tempw,temps,
      + int_mb(i_iw),dbl_mb(i_xw),dbl_mb(i_vw),dbl_mb(i_fw),
      + dbl_mb(i_xwcr),int_mb(i_is),dbl_mb(i_xs),dbl_mb(i_vs),
-     + dbl_mb(i_fs),mdstep,mequi+1,mequi+mdacq)
+     + dbl_mb(i_fs),mdstep)
       endif
       endif
 c
@@ -1200,7 +1203,7 @@ c
       if(frequency(icgit,nfqrs).or.(ldone.and.eqrs.gt.epot)) then
       write(projct,4000) nserie,msdit,icgit,filnam(1:56)
  4000 format(i2,' em ',i7,' + ',i7,' ',a)
-      call md_wrtrst(lfnqrs,filqrs,.false.)
+      call md_wrtrst(lfnqrs,filqrs,.false.,mdstep)
       cqrs='*'
       eqrs=ecg1
       endif
@@ -1307,7 +1310,7 @@ c
      + filnam(1:38)
  4000 format(i2,' md',a1,i7,' + ',i7,' @',f7.2,e9.2,' ',a)
       if(frequency(mdstep,nfrest)) then
-      call md_wrtrst(lfnrst,rfile,.true.)
+      call md_wrtrst(lfnrst,rfile,.true.,mdstep)
       endif
       if(frequency(mdstep,nftime)) call md_wrtime
 c
@@ -1605,7 +1608,9 @@ c
       write(projct,4000) nserie,irun,mrun,mequi,idacq,tmpext,
      + filnam(1:32)
  4000 format(i2,' ti ',i5,'/',i5,' :',i7,'+ ',i7,' @ ',f7.2,' K ',a)
-      if(frequency(mdstep,nfrest)) call md_wrtrst(lfnrst,rfile,.true.)
+      if(frequency(mdstep,nfrest)) then
+      call md_wrtrst(lfnrst,rfile,.true.,mdstep)
+      endif
       if(frequency(mdstep,nftime)) call md_wrtime
 c
       call timer_stop(201)
@@ -1822,7 +1827,7 @@ c
      + stime,pres,temp,tempw,temps,
      + int_mb(i_iw),dbl_mb(i_xw),dbl_mb(i_vw),dbl_mb(i_fw),
      + dbl_mb(i_xwcr),int_mb(i_is),dbl_mb(i_xs),dbl_mb(i_vs),
-     + dbl_mb(i_fs),mdstep,mequi+1,mequi+mdacq)
+     + dbl_mb(i_fs),mdstep)
       endif
 c
       call timer_stop(6)
@@ -1847,7 +1852,7 @@ c
      + stime,pres,temp,tempw,temps,
      + int_mb(i_iw),dbl_mb(i_xw),dbl_mb(i_vw),dbl_mb(i_fw),
      + dbl_mb(i_xwcr),int_mb(i_is),dbl_mb(i_xs),dbl_mb(i_vs),
-     + dbl_mb(i_fs),mdstep,mequi+1,mequi+mdacq)
+     + dbl_mb(i_fs),mdstep)
       endif
       endif
       call timer_stop(6)
@@ -2707,7 +2712,7 @@ c
 c
       return
       end
-      subroutine md_wrtrst(lfn,fil,lveloc)
+      subroutine md_wrtrst(lfn,fil,lveloc,curstep)
 c
       implicit none
 c
@@ -2722,6 +2727,7 @@ c
       integer lfn
       character*255 fil
       logical lveloc
+      integer curstep
       integer i,left
       character*255 filn
 c
@@ -2748,7 +2754,7 @@ c
       call sp_wrtrst(lfn,fil,lveloc,pres,temp,tempw,temps,
      + int_mb(i_iw),dbl_mb(i_xw),dbl_mb(i_vw),dbl_mb(i_gw),
      + dbl_mb(i_xwcr),int_mb(i_is),dbl_mb(i_xs),dbl_mb(i_vs),
-     + dbl_mb(i_gs),dbl_mb(i_xscr),projct,int_mb(i_lseq))
+     + dbl_mb(i_gs),dbl_mb(i_xscr),projct,int_mb(i_lseq),curstep)
 c
       call md_wtrest(lfn)
 c
