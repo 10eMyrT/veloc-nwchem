@@ -2271,6 +2271,28 @@ c
 c
       integer lenscr
       integer mdstep, verr
+c
+      if (modulo(mdstep, 10).eq.0) then
+         call VELOC_Mem_protect(0, c_loc(iwl),
+     +     size(iwl), sizeof(iwl(1,1)), verr)
+         call VELOC_Mem_protect(1, c_loc(xw),
+     +     size(xw), sizeof(xw(1,1,1)), verr)
+         call VELOC_Mem_protect(2, c_loc(vw),
+     +     size(vw), sizeof(vw(1,1,1)), verr)
+
+         call VELOC_Mem_protect(3, c_loc(isl),
+     +     size(isl), sizeof(isl(1,1)), verr)
+         call VELOC_Mem_protect(4, c_loc(xs),
+     +     size(xs), sizeof(xs(1,1)), verr)
+         call VELOC_Mem_protect(5, c_loc(vs),
+     +     size(vs), sizeof(vs(1,1)), verr)
+
+         ckptname = trim(project(1:4))//"_rst"
+         call VELOC_Checkpoint(ckptname, mdstep, verr)
+         print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
+         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
+      endif
+c
       project=prjct
 c
       lenscr=ma_inquire_avail(mt_byte)/
@@ -2307,28 +2329,6 @@ c
      + call md_abort('Failed to deallocate bv',0)
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
-c
-c
-      if (modulo(mdstep, 10).eq.0) then
-         call VELOC_Mem_protect(0, c_loc(iwl),
-     +     size(iwl), sizeof(iwl(1,1)), verr)
-         call VELOC_Mem_protect(1, c_loc(xw),
-     +     size(xw), sizeof(xw(1,1,1)), verr)
-         call VELOC_Mem_protect(2, c_loc(vw),
-     +     size(vw), sizeof(vw(1,1,1)), verr)
-
-         call VELOC_Mem_protect(3, c_loc(isl),
-     +     size(isl), sizeof(isl(1,1)), verr)
-         call VELOC_Mem_protect(4, c_loc(xs),
-     +     size(xs), sizeof(xs(1,1)), verr)
-         call VELOC_Mem_protect(5, c_loc(vs),
-     +     size(vs), sizeof(vs(1,1)), verr)
-        
-         ckptname = trim(project)//"_rst"
-         call VELOC_Checkpoint(ckptname, mdstep, verr)
-         print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
-         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
-      endif
 c
       return
       end
@@ -3204,8 +3204,7 @@ c
          call VELOC_Mem_protect(5, c_loc(vs),
      +     size(vs), sizeof(vs(1,1)), verr)
 
-         ckptname = trim(project)//"_trj"
-
+         ckptname = trim(project(1:4))//"_trj"
          call VELOC_Checkpoint(ckptname, mdstep, verr)
          print *, "VELOC :: Checkpoint(TRJ) collected for step", mdstep
          print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
