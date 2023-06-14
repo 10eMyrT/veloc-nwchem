@@ -2246,7 +2246,7 @@ c
       end
       subroutine sp_wrtrst(lfnrst,filrst,lveloc,
      + pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs,xscr,prjct,
-     + lseq,mdstep)
+     + lseq,mdstep,minstep,maxstep)
 c
       use iso_c_binding
       use veloc
@@ -2267,32 +2267,11 @@ c
       real*8 fw(mwm,3,mwa),xwcr(mwm,3)
       real*8 fs(msa,3),xscr(msm,3)
       character*80 prjct
-      character(len=255) ckptname
+      character(*) ckptname
 c
       integer lenscr
-      integer mdstep, verr
-c
-      if (modulo(mdstep, 10).eq.0) then
-         call VELOC_Mem_protect(0, c_loc(iwl),
-     +     size(iwl), sizeof(iwl(1,1)), verr)
-         call VELOC_Mem_protect(1, c_loc(xw),
-     +     size(xw), sizeof(xw(1,1,1)), verr)
-         call VELOC_Mem_protect(2, c_loc(vw),
-     +     size(vw), sizeof(vw(1,1,1)), verr)
-
-         call VELOC_Mem_protect(3, c_loc(isl),
-     +     size(isl), sizeof(isl(1,1)), verr)
-         call VELOC_Mem_protect(4, c_loc(xs),
-     +     size(xs), sizeof(xs(1,1)), verr)
-         call VELOC_Mem_protect(5, c_loc(vs),
-     +     size(vs), sizeof(vs(1,1)), verr)
-
-         ckptname = trim(project(1:4))//"_rst"
-         call VELOC_Checkpoint(ckptname, mdstep, verr)
-         print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
-         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
-      endif
-c
+      integer mdstep, minstep, maxstep, verr
+      ckptname = trim(project(1:4))//c_null_character
       project=prjct
 c
       lenscr=ma_inquire_avail(mt_byte)/
@@ -2316,6 +2295,33 @@ c
      + xscr,int_mb(i_ipl),lenscr,int_mb(i_bi),dbl_mb(i_bx),dbl_mb(i_bv),
      + dbl_mb(i_bf),dbl_mb(i_br),int_mb(i_bi),dbl_mb(i_bx),
      + dbl_mb(i_bv),dbl_mb(i_bf),lseq)
+c
+      if (veloc_initialized.eq.0) then
+         call sp_iveloc()
+         veloc_initialized = 1
+      endif
+      
+      call VELOC_Mem_protect(0, c_loc(iwl),
+     + size(iwl), sizeof(iwl(1,1)), verr)
+      call VELOC_Mem_protect(1, c_loc(xw),
+     + size(xw), sizeof(xw(1,1,1)), verr)
+      call VELOC_Mem_protect(2, c_loc(vw),
+     + size(vw), sizeof(vw(1,1,1)), verr)
+
+      call VELOC_Mem_protect(3, c_loc(isl),
+     + size(isl), sizeof(isl(1,1)), verr)
+      call VELOC_Mem_protect(4, c_loc(xs),
+     + size(xs), sizeof(xs(1,1)), verr)
+      call VELOC_Mem_protect(5, c_loc(vs),
+     + size(vs), sizeof(vs(1,1)), verr)
+
+      call VELOC_Checkpoint(ckptname, mdstep, verr)
+      print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
+      print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
+
+      if (mdstep.eq.maxstep) then
+         call sp_fveloc()
+      endif
 c
       if(.not.ma_pop_stack(l_n))
      + call md_abort('Failed to deallocate n',0)
@@ -3131,9 +3137,6 @@ c
       subroutine sp_wrttrj(lfntrj,lxw,lvw,lfw,lxs,lvs,lfs,
      + stime,pres,temp,tempw,temps,iwl,xw,vw,fw,xwcr,isl,xs,vs,fs,
      + mdstep)
-c
-      use iso_c_binding
-      use veloc
       implicit none
 c
 #include "sp_common.fh"
@@ -3142,16 +3145,15 @@ c
 c
       integer lfntrj
       logical lxw,lvw,lfw,lxs,lvs,lfs
-      integer, target :: iwl(mwm,miw2),isl(msa,mis2)
+      integer iwl(mwm,miw2),isl(msa,mis2)
       real*8 stime,pres,temp,tempw,temps
-      real*8, target :: xw(mwm,3,mwa),vw(mwm,3,mwa)
+      real*8 xw(mwm,3,mwa),vw(mwm,3,mwa)
       real*8 fw(mwm,3,mwa),xwcr(mwm,3)
-      real*8, target ::  xs(msa,3),vs(msa,3)
+      real*8 xs(msa,3),vs(msa,3)
       real*8 fs(msa,3)
 c
       integer lenscr
-      integer mdstep, verr
-      character(len=255) ckptname
+      integer mdstep
 c
       lenscr=ma_inquire_avail(mt_byte)/
      + ((9*mwa+3)*ma_sizeof(mt_dbl,1,mt_byte)+
@@ -3188,27 +3190,6 @@ c
      + call md_abort('Failed to deallocate bv',0)
       if(.not.ma_pop_stack(l_bx))
      + call md_abort('Failed to deallocate bx',0)
-c
-      if (modulo(mdstep, 10).eq.0) then
-         call VELOC_Mem_protect(0, c_loc(iwl),
-     +     size(iwl), sizeof(iwl(1,1)), verr)
-         call VELOC_Mem_protect(1, c_loc(xw),
-     +     size(xw), sizeof(xw(1,1,1)), verr)
-         call VELOC_Mem_protect(2, c_loc(vw),
-     +     size(vw), sizeof(vw(1,1,1)), verr)
-
-         call VELOC_Mem_protect(3, c_loc(isl),
-     +     size(isl), sizeof(isl(1,1)), verr)
-         call VELOC_Mem_protect(4, c_loc(xs),
-     +     size(xs), sizeof(xs(1,1)), verr)
-         call VELOC_Mem_protect(5, c_loc(vs),
-     +     size(vs), sizeof(vs(1,1)), verr)
-
-         ckptname = trim(project(1:4))//"_trj"
-         call VELOC_Checkpoint(ckptname, mdstep, verr)
-         print *, "VELOC :: Checkpoint(TRJ) collected for step", mdstep
-         print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
-      endif
 c
       return
       end
@@ -3248,8 +3229,6 @@ c
       lpw=.false.
       lps=.false.
 c
-      !write(6, *) "Successfully Exited in wttrj"
-      !stop -1
       if(me.eq.0) then
 c
       call swatch(rdate,rtime)
