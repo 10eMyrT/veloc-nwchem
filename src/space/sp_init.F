@@ -2267,11 +2267,11 @@ c
       real*8 fw(mwm,3,mwa),xwcr(mwm,3)
       real*8 fs(msa,3),xscr(msm,3)
       character*80 prjct
-      character(*) ckptname
+      character(len=255) ckptname
 c
       integer lenscr
       integer mdstep, minstep, maxstep, verr
-      ckptname = trim(project(1:4))//c_null_character
+      ckptname = trim(filrst(1:4))//c_null_char
       project=prjct
 c
       lenscr=ma_inquire_avail(mt_byte)/
@@ -2315,7 +2315,7 @@ c
       call VELOC_Mem_protect(5, c_loc(vs),
      + size(vs), sizeof(vs(1,1)), verr)
 
-      call VELOC_Checkpoint(ckptname, mdstep, verr)
+      call VELOC_Checkpoint("nwchem_ckpt", mdstep, verr)
       print *, "VELOC :: Checkpoint(RST) collected for step", mdstep
       print *, "VELOC :: mwm,miw2,msa,mis2,mwa",mwm,miw2,msa,mis2,mwa
 
@@ -3106,14 +3106,17 @@ c
       end
 
       subroutine sp_iveloc()
-      
-      use veloc
-      implicit none
-      integer ga_comm_world, verr
 
+      use veloc
+      use iso_c_binding
+      implicit none     
+      integer ga_comm_world, verr
+      character(len=255) velocconf
+      
       call ga_mpi_comm_pgroup_default(ga_comm_world)
-      call VELOC_Init(ga_comm_world, 
-     + "/users/kate01/configs/nwchem.cfg", verr)
+      call get_environment_variable("VELOC_NWCHEM_CONF", velocconf)
+      velocconf = trim(velocconf)//c_null_char
+      call VELOC_Init(ga_comm_world, velocconf, verr)
       if (verr.ne.VELOC_SUCCESS) then
          print *, "VELOC :: Initialization Failed"
          stop -1
