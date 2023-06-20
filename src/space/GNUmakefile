@@ -3,6 +3,7 @@
 #
 #
 OBJ=veloc_module.o veloc_wrapper.o sp_init.o sp_main.o 
+LIB_INCLUDES=-I${HOME}/veloc-recup/veloc/include
 LIBRARY=libspace.a
 
 HEADER=
