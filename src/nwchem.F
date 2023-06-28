@@ -1,11 +1,12 @@
       program nwchem
-      !use MPI
       implicit none
 #include "errquit.fh"
 #include "mafdecls.fh"
 #include "global.fh"
 #include "rtdb.fh"
-#include "mpif.h"
+c#ifdef USE_VELOC
+c#include "mpif.h"
+c#endif
 #ifdef USE_TCGMSG
 #include "tcgmsg.fh"
 #else
@@ -91,9 +92,9 @@ c
 c
 c     Create parallel processes and initialize IPC layer
 c
-      integer ierr, provided
-      !call pbeginf()
-      call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
+      !integer ierr, provided
+      call pbeginf()
+      !call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
 c
 c     MXINIT is needed by PeIGS and PFFT to initialize
 c     the communication fabric they use.
@@ -389,8 +390,8 @@ c
 c
 c     Tidy up the parallel environment
 c
-      !call pend()
-      call MPI_Finalize(ierr)
+      call pend()
+      !call MPI_Finalize(ierr)
 c
 c     Close the ECCE' output file if there is one
 c

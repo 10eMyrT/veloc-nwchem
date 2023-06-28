@@ -6,7 +6,7 @@ c
 c
 #include "md_common.fh"
 c
-      call sp_iveloc()
+      !call sp_iveloc()
 c
       if(ntype.eq.0) then
 c
@@ -44,7 +44,9 @@ c
       call md_abort('Unknown calculation type',ntype)
       endif
 c
+#ifdef USE_VELOC
       call sp_fveloc()
+#endif
       return
       end
       subroutine md_sp()

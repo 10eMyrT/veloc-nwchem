@@ -2971,7 +2971,6 @@ endif
 EXTRA_LIBS += $(CONFIG_LIBS)
 CORE_LIBS += $(EXTRA_LIBS)
 
-
 ifdef OPTIMIZE
     FFLAGS = $(FOPTIONS) $(FOPTIMIZE)
     CFLAGS =  $(COPTIONS) $(COPTIMIZE)
@@ -3117,15 +3116,24 @@ endif
 
 endif
 
-################################# VeloC ###################################
-#   The following libraries and paths are added to support the            #
-#   integration of VeloC into NWCHEM for checkpointing.                   #
+####################################### VeloC #######################################
+#   The following libraries and paths are added to support the                      #
+#   integration of VeloC into NWCHEM for checkpointing.                             #
 
-MPI_INCLUDE = $(shell $(NWCHEM_TOP)/src/tools/guess-mpidefs --mpi_include)
-INCPATH += -I${VELOC_ROOT}/include -I${MPI_INCLUDE}
-CORE_LIBS += -L${VELOC_ROOT}/lib -lveloc-client
-#                                                                         #
-#                                                                         #
-################################ VeloC End ################################
+ifdef USE_VELOC
+    ifneq ($(USE_VELOC),y)
+	$(error USE_VELOC should be defined as y)
+    endif
 
+    ifndef USE_MPI
+        MPI_INCLUDE  = $(shell $(NWCHEM_TOP)/src/tools/guess-mpidefs --mpi_include)
+    endif
+    
+    CORE_LIBS += -L$(VELOC_ROOT)/lib -lveloc-client
+    INCPATH += -I$(VELOC_ROOT)/include $(MPI_INCLUDE)
+    FOPTIONS += -DUSE_VELOC
+endif
 
+#                                                                                  #
+#                                                                                  #
+#################################### VeloC End #####################################

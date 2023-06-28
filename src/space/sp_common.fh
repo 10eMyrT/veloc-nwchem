@@ -2,9 +2,8 @@ c
 c $Id$
 c
 c     veloc configuration
-
-      character(255) veloc_conf
-      parameter(veloc_conf="/users/kate01/configs/nwchem.cfg")
+      
+      integer :: veloc_initialized = 0
 c
 c     conversion factors
 c
